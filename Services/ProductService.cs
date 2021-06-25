@@ -2,13 +2,13 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.GridFS;
-using System;
+using MongoDbApp.Models;
+using MongoDbApp.ViewModels;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 
-namespace MongoDbApp.Models
+namespace MongoDbApp.Services
 {
     public class ProductService
     {
@@ -46,7 +46,27 @@ namespace MongoDbApp.Models
             }
 
             return await _products.Find(filter).ToListAsync();
-            //return await _products.Find(product => product.Name == name).ToListAsync();
+        }
+
+        public async Task<IEnumerable<Product>> GetProducts(FilterViewModel viewModel)
+        {
+            FilterDefinitionBuilder<Product> builder = new();
+            FilterDefinition<Product> filter = builder.Empty;
+
+            if (string.IsNullOrWhiteSpace(viewModel.Name) is false)
+            {
+                filter &= builder.Regex("Name", new BsonRegularExpression(viewModel.Name));
+            }
+            if (viewModel.MinPrice.HasValue is true)  // фильтр по минимальной цене
+            {
+                filter &= builder.Gte("Price", viewModel.MinPrice);
+            }
+            if (viewModel.MaxPrice.HasValue is true)  // фильтр по максимальной цене
+            {
+                filter &= builder.Lte("Price", viewModel.MaxPrice);
+            }
+
+            return await _products.Find(filter).ToListAsync();
         }
 
         public async Task<Product> GetProduct(string id) => await _products.Find(new BsonDocument("_id", new ObjectId(id))).FirstOrDefaultAsync();
@@ -72,6 +92,19 @@ namespace MongoDbApp.Models
 
             var filter = Builders<Product>.Filter.Eq("_id", new ObjectId(p.Id));
             var update = Builders<Product>.Update.Set("ImageId", p.ImageId);
+
+            await _products.UpdateOneAsync(filter, update);
+        }
+
+        public async Task DeleteImage(string id)
+        {
+            Product p = await GetProduct(id);
+
+            //If product already has image delete it
+            if (p.HasImage() is true) await _gridFS.DeleteAsync(new ObjectId(p.ImageId));
+
+            var filter = Builders<Product>.Filter.Eq("_id", new ObjectId(p.Id));
+            var update = Builders<Product>.Update.Unset("ImageId");
 
             await _products.UpdateOneAsync(filter, update);
         }
