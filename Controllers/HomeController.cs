@@ -67,6 +67,22 @@ namespace MongoDbApp.Controllers
             return RedirectToAction("Index");
         }
 
+        [HttpPost]
+        public async Task<IActionResult> DeleteImage(string id)
+        {
+            await _db.DeleteImage(id);
+
+            return RedirectToAction("Index");
+        }
+
+        public async Task<IActionResult> GetImage(string id)
+        {
+            var image = await _db.GetImage(id);
+            if (image is null) return NotFound();
+
+            return File(image, "image/png");
+        }
+
         public async Task<IActionResult> AttachImage(string id)
         {
             Product product = await _db.GetProduct(id);
@@ -82,22 +98,6 @@ namespace MongoDbApp.Controllers
             {
                 await _db.StoreImage(id, uploadedFile.OpenReadStream(), uploadedFile.FileName);
             }
-
-            return RedirectToAction("Index");
-        }
-
-        public async Task<IActionResult> GetImage(string id)
-        {
-            var image = await _db.GetImage(id);
-            if (image is null) return NotFound();
-
-            return File(image, "image/png");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> DeleteImage(string id)
-        {
-            await _db.DeleteImage(id);
 
             return RedirectToAction("Index");
         }

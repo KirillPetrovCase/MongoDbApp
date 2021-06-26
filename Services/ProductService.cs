@@ -27,6 +27,25 @@ namespace MongoDbApp.Services
             _products = mongoDatabase.GetCollection<Product>("Products");
         }
 
+        public async Task Create(Product product) => await _products.InsertOneAsync(product);
+
+        public async Task DeleteImage(string id)
+        {
+            Product p = await GetProduct(id);
+
+            //If product already has image delete it
+            if (p.HasImage() is true) await _gridFS.DeleteAsync(new ObjectId(p.ImageId));
+
+            var filter = Builders<Product>.Filter.Eq("_id", new ObjectId(p.Id));
+            var update = Builders<Product>.Update.Unset("ImageId");
+
+            await _products.UpdateOneAsync(filter, update);
+        }
+
+        public async Task<byte[]> GetImage(string id) => await _gridFS.DownloadAsBytesAsync(new ObjectId(id));
+
+        public async Task<Product> GetProduct(string id) => await _products.Find(new BsonDocument("_id", new ObjectId(id))).FirstOrDefaultAsync();
+
         public async Task<IEnumerable<Product>> GetProducts(int? minPrice, int? maxPrice, string name)
         {
             FilterDefinitionBuilder<Product> builder = new();
@@ -69,15 +88,7 @@ namespace MongoDbApp.Services
             return await _products.Find(filter).ToListAsync();
         }
 
-        public async Task<Product> GetProduct(string id) => await _products.Find(new BsonDocument("_id", new ObjectId(id))).FirstOrDefaultAsync();
-
-        public async Task Create(Product product) => await _products.InsertOneAsync(product);
-
-        public async Task Update(Product product) => await _products.ReplaceOneAsync(new BsonDocument("_id", new ObjectId(product.Id)), product);
-
         public async Task Remove(string id) => await _products.DeleteOneAsync(new BsonDocument("_id", new ObjectId(id)));
-
-        public async Task<byte[]> GetImage(string id) => await _gridFS.DownloadAsBytesAsync(new ObjectId(id));
 
         public async Task StoreImage(string id, Stream imageStream, string imageName)
         {
@@ -96,17 +107,6 @@ namespace MongoDbApp.Services
             await _products.UpdateOneAsync(filter, update);
         }
 
-        public async Task DeleteImage(string id)
-        {
-            Product p = await GetProduct(id);
-
-            //If product already has image delete it
-            if (p.HasImage() is true) await _gridFS.DeleteAsync(new ObjectId(p.ImageId));
-
-            var filter = Builders<Product>.Filter.Eq("_id", new ObjectId(p.Id));
-            var update = Builders<Product>.Update.Unset("ImageId");
-
-            await _products.UpdateOneAsync(filter, update);
-        }
+        public async Task Update(Product product) => await _products.ReplaceOneAsync(new BsonDocument("_id", new ObjectId(product.Id)), product);
     }
 }

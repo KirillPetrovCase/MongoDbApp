@@ -6,6 +6,7 @@ namespace MongoDbApp.ViewModels
     public class IndexViewModel
     {
         public FilterViewModel Filter { get; set; }
+
         public IEnumerable<Product> Products { get; set; }
 
         public IndexViewModel(FilterViewModel filter, IEnumerable<Product> products)
